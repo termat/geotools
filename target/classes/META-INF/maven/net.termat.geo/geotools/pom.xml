@@ -169,7 +169,7 @@
 							<goal>single</goal>
 						</goals>
 						<configuration>
-                			<finalName>net.termat.geotools</finalName>
+                			<finalName>net.termat.geo.geotools</finalName>
 							<appendAssemblyId>false</appendAssemblyId>
 							<descriptorRefs>
 								<descriptorRef>jar-with-dependencies</descriptorRef>
