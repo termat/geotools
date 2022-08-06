@@ -1,6 +1,7 @@
 package net.termat.geo.elevation;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
@@ -82,7 +83,7 @@ public class LasFileReader {
 			height=height+height%5;
 		}
 	}
-
+	
 	public void create(){
 		img=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
 		for(int i=0;i<img.getWidth();i++){
@@ -124,6 +125,17 @@ public class LasFileReader {
 
 	public void createPhoto() throws IOException{
 		img=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+		for(int i=0;i<list.length;i++){
+			LASReader r = new LASReader(list[i]);
+			writePhoto(r,img);
+		}
+	}
+	
+	public void createPhotoARGB() throws IOException{
+		img=new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g=(Graphics2D )img.getGraphics();
+		g.setBackground(new Color(0,0,0,0));
+		g.clearRect(0, 0, img.getWidth(), img.getHeight());
 		for(int i=0;i<list.length;i++){
 			LASReader r = new LASReader(list[i]);
 			writePhoto(r,img);

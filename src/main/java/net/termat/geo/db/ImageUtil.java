@@ -12,7 +12,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+
+import com.luciad.imageio.webp.WebPWriteParam;
 
 /**
  * 画像処理ユーティリティクラス
@@ -31,12 +37,31 @@ public class ImageUtil {
 	 * @throws IOException
 	 */
 	public static byte[] bi2Bytes(BufferedImage img,String ext)throws IOException{
+		if(ext.equals("webp")) {
+			return bi2BytesWebp(img);
+		}else {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write( img, ext, baos );
+			baos.flush();
+			return baos.toByteArray();
+		}
+	}
+
+	public static byte[] bi2BytesWebp(BufferedImage img)throws IOException{
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ImageIO.write( img, ext, baos );
+		ImageOutputStream  ios =  ImageIO.createImageOutputStream(baos);
+		ImageWriter writer = ImageIO.getImageWritersByMIMEType("image/webp").next();
+		WebPWriteParam writeParam = new WebPWriteParam(writer.getLocale());
+		writeParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+		writeParam.setCompressionType(writeParam.getCompressionTypes()[WebPWriteParam.LOSSLESS_COMPRESSION]);
+		writer.setOutput(ios);
+		writer.write(null, new IIOImage(img, null, null), writeParam);
+		ios.flush();
 		baos.flush();
 		return baos.toByteArray();
 	}
-
+	
+	
 	/**
 	 * byte[]をBufferedImageに変換
 	 * @param raw byte[]

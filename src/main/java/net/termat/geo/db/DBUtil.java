@@ -11,8 +11,57 @@ import java.util.List;
 
 import org.locationtech.jts.io.ParseException;
 
+import net.termat.geo.elevation.TinInterpoler;
+
 public class DBUtil {
 
+	public static void copyImageDB(PointCloudDB src,PointCloudDB dst,String ext) {
+		try {
+			List<Index> list=src.getIndexes();
+			int it=0;
+			for(Index ii : list) {
+				if(++it%100==0)System.out.println(it);
+				try {
+					BufferedImage img=src.getImage(ii);
+					dst.add(ii, img, ext);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void intersectionPngDem(PointCloudDB db,Index id) {
+		BufferedImage img;
+		try {
+			img = db.getExpantionImage(id,20);
+			TinInterpoler tin=new TinInterpoler(img);
+			tin.create();
+			img=tin.getImage();
+			img=img.getSubimage(20, 20, img.getWidth()-40, img.getHeight()-40);
+			db.update(id, img, "png");
+		} catch (SQLException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void intersectionPngDem(PointCloudDB db,Index id,String addType) {
+		BufferedImage img;
+		try {
+			img = db.getExpantionImage(id,20);
+			TinInterpoler tin=new TinInterpoler(img);
+			tin.create();
+			img=tin.getImage();
+			img=img.getSubimage(20, 20, img.getWidth()-40, img.getHeight()-40);
+			AffineTransform af=id.getTransform();
+			db.add(id.coordSys, id.name, addType, img, af);
+		} catch (SQLException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public static void dataIntegrade(PointCloudDB db,Index i1) throws SQLException, IOException, ParseException {
 		if(!i1.name.endsWith("a"))return;
 		String name=i1.name.substring(0, i1.name.length()-1);

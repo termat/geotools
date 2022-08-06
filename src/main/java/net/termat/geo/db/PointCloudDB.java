@@ -76,7 +76,38 @@ public class PointCloudDB {
 		long key=System.currentTimeMillis();
 		im.key=key;
 		try {
-			im.imageBytes=ImageUtil.bi2Bytes(img, "png");
+			if(type.contains("PHOTO")) {
+				im.imageBytes=ImageUtil.bi2Bytes(img, "jpg");
+			}else {
+				im.imageBytes=ImageUtil.bi2Bytes(img, "png");
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		Index index=new Index();
+		index.coordSys=coordSys;
+		index.type=type;
+		index.name=name;
+		index.key=key;
+		index.dataType=Index.DataType.IMAGE;
+		index.setTransform(af);
+		index.width=img.getWidth();
+		index.height=img.getHeight();
+		try {
+			imageDao.create(im);
+			indexDao.create(index);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		dbchange();
+	}
+	
+	public void add(int coordSys,String name,String type,BufferedImage img,AffineTransform af,String ext){
+		Image im=new Image();
+		long key=System.currentTimeMillis();
+		im.key=key;
+		try {
+			im.imageBytes=ImageUtil.bi2Bytes(img, ext);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -98,21 +129,36 @@ public class PointCloudDB {
 		dbchange();
 	}
 
+	public void add(Index index,BufferedImage img,String ext) {
+		Image im=new Image();
+		long key=System.currentTimeMillis();
+		im.key=key;
+		index.key=key;
+		try {
+			im.imageBytes=ImageUtil.bi2Bytes(img, ext);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		try {
+			imageDao.create(im);
+			indexDao.create(index);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		dbchange();
+	}
+	
 	public void update(Index index) throws SQLException {
 		indexDao.update(index);
 	}
 
-	public void updateData(Index index,BufferedImage img) throws SQLException {
+	public void update(Index index,BufferedImage img,String ext) throws SQLException {
 		QueryBuilder<Image, Long> query=imageDao.queryBuilder();
 		query.where().eq("key",index.key);
 		List<Image> list=imageDao.query(query.prepare());
 		Image src=list.get(0);
 		try {
-			if(index.type.contains("PHOTO")){
-				src.imageBytes=ImageUtil.bi2Bytes(img, "jpg");
-			}else{
-				src.imageBytes=ImageUtil.bi2Bytes(img, "png");
-			}
+			src.imageBytes=ImageUtil.bi2Bytes(img, ext);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -280,15 +326,15 @@ public class PointCloudDB {
 		Point2D xy2=PCUtil.getXY(i0.coordSys, rectLonlat.getX()+rectLonlat.getWidth(), rectLonlat.getY()+rectLonlat.getHeight());
 		Rectangle2D r=new Rectangle2D.Double(xy1.getX(),xy1.getY(),0,0);
 		r.add(xy2);
-		BufferedImage ret=new BufferedImage(sizeWH,sizeWH,BufferedImage.TYPE_INT_ARGB);
+		BufferedImage ret=new BufferedImage(sizeWH,sizeWH,BufferedImage.TYPE_INT_RGB);
 		Graphics2D g=ret.createGraphics();
-		g.setBackground(new Color(0,0,0,0));
+		g.setBackground(new Color(0,0,0));
 		g.clearRect(0, 0, sizeWH, sizeWH);
 		g.dispose();
-		double sc=r.getWidth()/sizeWH;
-		double[] param=new double[] {sc,0,0,-sc,r.getX(),r.getY()+r.getHeight()};
+		double[] param=new double[] {r.getWidth()/sizeWH,0,0,-r.getWidth()/sizeWH,r.getX(),r.getY()+r.getHeight()};
 		AffineTransform af=new AffineTransform(param);
 		AffineTransform iaf=null;
+		int ck=0;
 		for(Index i : list) {
 			if(r.intersects(i.getBounds())) {
 				BufferedImage tmp=getImage(i);
@@ -306,12 +352,17 @@ public class PointCloudDB {
 						int yy=(int)Math.floor(p.getY());
 						if(xx>=0&&xx<i.width&&yy>=0&&yy<i.height) {
 							ret.setRGB(ix, iy, tmp.getRGB(xx, yy));
+							ck=1;
 						}
 					}
 				}
 			}
 		}
-		return ret;
+		if(ck==1) {
+			return ret;
+		}else {
+			return null;
+		}
 	}
 	
 	public BufferedImage getExpantionImage(Index id,int exp) throws SQLException, IOException{

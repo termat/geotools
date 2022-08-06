@@ -21,7 +21,7 @@ import com.google.gson.GsonBuilder;
 public class Tcx2Geojson {
 
 	public static void main(String[] args){
-		File f=new File("D:\\Documents\\自転車\\20220702.tcx");
+		File f=new File("D:\\Documents\\自転車\\20220806.tcx");
 		try{
 			Map<String,Object> root=new HashMap<String,Object>();
 			root.put("type","FeatureCollection");
