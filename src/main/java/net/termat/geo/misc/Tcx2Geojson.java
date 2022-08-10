@@ -1,13 +1,32 @@
 package net.termat.geo.misc;
 
+import java.awt.BorderLayout;
+import java.awt.Font;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetAdapter;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -19,9 +38,90 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public class Tcx2Geojson {
+	private JFrame frame;
+	
+	public Tcx2Geojson() {
+		frame=new JFrame();
+		frame.setTitle("Tcx2Geojson");
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		try {
+			UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+			SwingUtilities.updateComponentTreeUI(frame);
+		}catch(Exception e){
+			try {
+				UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+				SwingUtilities.updateComponentTreeUI(frame);
+			}catch(Exception ee){
+				ee.printStackTrace();
+			}
+		}
+		WindowAdapter wa=new WindowAdapter(){
+			@Override
+			public void windowClosing(WindowEvent e) {
+				close();
+			}
+		};
+		frame.addWindowListener(wa);
+		frame.setSize(400, 400);
+		frame.setResizable(false);
+		JLabel la=new JLabel("Drop");
+		la.setFont(new Font(Font.SANS_SERIF,Font.BOLD,24));
+		la.setHorizontalAlignment(JLabel.CENTER);
+		frame.getContentPane().setLayout(new BorderLayout());
+		frame.getContentPane().add(la);
+		
+		DropTargetListener dtl = new DropTargetAdapter() {
+			@Override
+			public void dragOver(DropTargetDragEvent dtde) {
+				if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+					dtde.acceptDrag(DnDConstants.ACTION_COPY);
+					return;
+				}
+			    dtde.rejectDrag();
+			}
 
-	public static void main(String[] args){
-		File f=new File("D:\\Documents\\自転車\\20220806.tcx");
+			@SuppressWarnings("rawtypes")
+			@Override
+			public void drop(DropTargetDropEvent dtde) {
+				try {
+				if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+					dtde.acceptDrop(DnDConstants.ACTION_COPY);
+					Transferable transferable = dtde.getTransferable();
+					List list = (List) transferable.getTransferData(DataFlavor.javaFileListFlavor);
+						for (Object o: list) {
+							if (o instanceof File) {
+								File file = (File) o;
+								proc(file);
+							}
+						}
+						dtde.dropComplete(true);
+						return;
+					}
+				} catch (UnsupportedFlavorException | IOException ex) {
+					ex.printStackTrace();
+				}
+				dtde.rejectDrop();
+				}
+		};
+		new DropTarget(la, DnDConstants.ACTION_COPY, dtl, true);
+	}
+	
+	private void close(){
+		int id=JOptionPane.showConfirmDialog(frame, "Exit?", "Info", JOptionPane.YES_NO_OPTION,JOptionPane.INFORMATION_MESSAGE);
+		if(id==JOptionPane.YES_OPTION){
+			frame.setVisible(false);
+			System.exit(0);
+		}
+	}
+	
+	public static void main(String[] arg) {
+		Tcx2Geojson app=new Tcx2Geojson();
+		app.frame.setLocationRelativeTo(null);
+		app.frame.setVisible(true);
+	}
+
+	public void proc(File f){
+		if(!f.getName().endsWith(".tcx"))return;
 		try{
 			Map<String,Object> root=new HashMap<String,Object>();
 			root.put("type","FeatureCollection");
@@ -47,11 +147,6 @@ public class Tcx2Geojson {
 				nl=e.getElementsByTagName("ns3:Speed");
 				n=(Element)nl.item(0);
 				double spd=Double.parseDouble(n.getTextContent());
-				/*
-				nl=e.getElementsByTagName("Time");
-				n=(Element)nl.item(0);
-				long date=Date.parse(n.getTextContent());
-				*/
 				Map<String,Object> obj=new HashMap<>();
 				Map<String,Object> geo=new HashMap<>();
 				Map<String,Object> prop=new HashMap<>();

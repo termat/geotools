@@ -56,7 +56,7 @@ public class WebTile {
 		int w=(int)Math.ceil(xy.getWidth()/resolution);
 		int h=(int)Math.ceil(xy.getHeight()/resolution);
 		if(w%2==1)w++;
-		if(h%w==1)h++;
+		if(h%2==1)h++;
 		double[] param=new double[]{
 				resolution,0,0,-resolution,xy.getX(),xy.getY()+xy.getHeight()};
 		af=new AffineTransform(param);
@@ -64,6 +64,46 @@ public class WebTile {
 		if(backGround!=null)fillBackGround(img);
 		for(int i=0;i<w;i++){
 			for(int j=0;j<h;j++){
+				Point2D pxy=af.transform(new Point2D.Double(i,j),new Point2D.Double());
+				Point2D lonlat=PCUtil.getLonlat(coordSys, pxy.getX(), pxy.getY());
+				Point2D pixel=lonlatToPixel(zoom,lonlat);
+				Point2D tile=new Point2D.Double(Math.floor(pixel.getX()/256),Math.floor(pixel.getY()/256));
+				if(tiles.containsKey(tile)){
+					BufferedImage tmp=tiles.get(tile);
+					if(tmp!=null){
+						int xx=(int)pixel.getX()%256;
+						int yy=(int)pixel.getY()%256;
+						img.setRGB(i, j, tmp.getRGB(xx, yy));
+					}
+				}else{
+					BufferedImage tmp=getTile(zoom,(long)tile.getX(),(long)tile.getY());
+					if(tmp!=null){
+						int xx=(int)pixel.getX()%256;
+						int yy=(int)pixel.getY()%256;
+						img.setRGB(i, j, tmp.getRGB(xx, yy));
+					}
+					tiles.put(tile, tmp);
+				}
+			}
+		}
+	}
+	
+	public void create(int coordSys,Rectangle2D xy,int divisor)throws IOException{
+		int w=(int)Math.ceil(xy.getWidth()/resolution);
+		int h=(int)Math.ceil(xy.getHeight()/resolution);
+		int ww=w;
+		int hh=h;
+		while(ww%divisor!=0)ww++;
+		while(hh%divisor!=0)hh++;
+		int dx=ww-w;
+		int dy=hh-h;
+		double[] param=new double[]{
+				resolution,0,0,-resolution,xy.getX()-0.5*dx*resolution,xy.getY()+hh*resolution-0.5*dy*resolution};
+		af=new AffineTransform(param);
+		img=new BufferedImage(ww,hh,BufferedImage.TYPE_INT_RGB);
+		if(backGround!=null)fillBackGround(img);
+		for(int i=0;i<ww;i++){
+			for(int j=0;j<hh;j++){
 				Point2D pxy=af.transform(new Point2D.Double(i,j),new Point2D.Double());
 				Point2D lonlat=PCUtil.getLonlat(coordSys, pxy.getX(), pxy.getY());
 				Point2D pixel=lonlatToPixel(zoom,lonlat);
@@ -102,7 +142,6 @@ public class WebTile {
 			con.setSSLSocketFactory(sslContext.getSocketFactory());
 			con.setHostnameVerifier(new LooseHostnameVerifier());
 	        BufferedImage tmp=ImageIO.read(con.getInputStream());
-//			BufferedImage tmp=ImageIO.read(new URL(uu));
 			if(tmp!=null)return tmp;
 		}catch(IOException | KeyManagementException | NoSuchAlgorithmException e) {
 			e.printStackTrace();
